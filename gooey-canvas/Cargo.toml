@@ -1,0 +1,31 @@
+[package]
+name = "gooey-canvas"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+default = ["frontend-kludgine", "frontend-browser"]
+frontend-kludgine = ["gooey/frontend-kludgine"]
+frontend-browser = [
+    "gooey/frontend-browser",
+    "wasm-bindgen",
+    "web-sys",
+    "flume",
+    "js-sys",
+]
+
+[dependencies]
+gooey = { git="https://github.com/khonsulabs/gooey.git", branch="main" }
+wasm-bindgen = { version="0.2", optional=true }
+web-sys = { version="0.3", optional=true, features=[
+    "HtmlElement",
+    "Element",
+    "HtmlCanvasElement",
+    "Window",
+    "CanvasRenderingContext2d",
+    "TextMetrics",
+] }
+js-sys = { version="0.3", optional=true }
+flume = { version="0.10", optional=true }
