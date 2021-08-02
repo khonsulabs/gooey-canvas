@@ -31,6 +31,14 @@ builder
     .finish()
 ```
 
+Rendered in light mode (background color of the window shines through the edges):
+
+![Basic Demo Light](./gooey-canvas/examples/snapshots/basic/Demo-Light.png)
+
+And dark mode:
+
+![Basic Demo Dark](./gooey-canvas/examples/snapshots/basic/Demo-Dark.png)
+
 ## Supported Frontends
 
 Support for each frontend is controlled with feature flags. By default, `frontend-browser` and `frontend-kludgine` are both enabled.

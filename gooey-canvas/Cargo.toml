@@ -3,7 +3,9 @@ name = "gooey-canvas"
 version = "0.1.0"
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[example]]
+name = "basic"
+test = true
 
 [features]
 default = ["frontend-kludgine", "frontend-browser"]
@@ -29,3 +31,8 @@ web-sys = { version="0.3", optional=true, features=[
 ] }
 js-sys = { version="0.3", optional=true }
 flume = { version="0.10", optional=true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+tokio = { version="1", features=["full"] }
+anyhow = "1"
+image = "0.23"
