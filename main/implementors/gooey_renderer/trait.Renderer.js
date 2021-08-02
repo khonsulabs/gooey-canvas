@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["gooey_canvas"] = [{"text":"impl Renderer for <a class=\"enum\" href=\"gooey_canvas/enum.CanvasRenderer.html\" title=\"enum gooey_canvas::CanvasRenderer\">CanvasRenderer</a>","synthetic":false,"types":["gooey_canvas::CanvasRenderer"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

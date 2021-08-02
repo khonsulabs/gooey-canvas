@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["gooey_canvas"] = [{"text":"impl&lt;S:&nbsp;KeyedStorage&lt;<a class=\"primitive\" href=\"https://doc.rust-lang.org/nightly/std/primitive.unit.html\">()</a>&gt;&gt; ContentBuilder&lt;<a class=\"primitive\" href=\"https://doc.rust-lang.org/nightly/std/primitive.unit.html\">()</a>, S&gt; for <a class=\"struct\" href=\"gooey_canvas/struct.Builder.html\" title=\"struct gooey_canvas::Builder\">Builder</a>&lt;S&gt;","synthetic":false,"types":["gooey_canvas::Builder"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

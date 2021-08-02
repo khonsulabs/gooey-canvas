@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["gooey_canvas"] = [{"text":"impl Transmogrifier&lt;Rasterizer&lt;Kludgine&gt;&gt; for <a class=\"struct\" href=\"gooey_canvas/struct.CanvasTransmogrifier.html\" title=\"struct gooey_canvas::CanvasTransmogrifier\">CanvasTransmogrifier</a>","synthetic":false,"types":["gooey_canvas::CanvasTransmogrifier"]},{"text":"impl Transmogrifier&lt;WebSys&gt; for <a class=\"struct\" href=\"gooey_canvas/struct.CanvasTransmogrifier.html\" title=\"struct gooey_canvas::CanvasTransmogrifier\">CanvasTransmogrifier</a>","synthetic":false,"types":["gooey_canvas::CanvasTransmogrifier"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
