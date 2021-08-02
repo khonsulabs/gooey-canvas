@@ -13,7 +13,7 @@ Standalone:
 Canvas::new(|renderer: CanvasRenderer| {
     renderer.fill_rect(
         &renderer.bounds().inflate(-64., -64.),
-        Color::new(1., 0., 0., 1.),
+        Color::RED,
     );
 })
 ```
@@ -25,7 +25,7 @@ builder
     .on_render(|renderer: CanvasRenderer| {
         renderer.fill_rect(
             &renderer.bounds().inflate(-64., -64.),
-            Color::new(1., 0., 0., 1.),
+            Color::RED,
         );
     })
     .finish()

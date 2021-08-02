@@ -34,10 +34,7 @@ impl Behavior for Basic {
     ) -> gooey::core::StyledWidget<Self::Content> {
         builder
             .on_render(|renderer: CanvasRenderer| {
-                renderer.fill_rect(
-                    &renderer.bounds().inflate(-64., -64.),
-                    Color::new(1., 0., 0., 1.),
-                );
+                renderer.fill_rect(&renderer.bounds().inflate(-64., -64.), Color::RED);
             })
             .finish()
     }
