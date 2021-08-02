@@ -11,9 +11,9 @@ Standalone:
 
 ```rust
 Canvas::new(|renderer: CanvasRenderer| {
-    renderer.fill_rect::<BackgroundColor>(
+    renderer.fill_rect(
         &renderer.bounds().inflate(-64., -64.),
-        &Style::default().with(BackgroundColor(Color::new(1., 0., 0., 1.).into())),
+        Color::new(1., 0., 0., 1.),
     );
 })
 ```
