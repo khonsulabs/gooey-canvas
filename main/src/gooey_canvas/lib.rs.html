@@ -238,13 +238,18 @@
 <span id="235">235</span>
 <span id="236">236</span>
 <span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">std::fmt::Debug</span>;
 
 <span class="kw">use</span> <span class="ident">browser::BrowserRenderer</span>;
 <span class="kw">use</span> <span class="ident">gooey</span>::{
-    <span class="ident">core</span>::{<span class="ident">KeyedStorage</span>, <span class="ident">StyledWidget</span>, <span class="ident">Widget</span>},
-    <span class="ident">renderer::Renderer</span>,
+    <span class="ident">core</span>::{
+        <span class="ident">styles</span>::{<span class="ident">Color</span>, <span class="ident">SystemTheme</span>},
+        <span class="ident">KeyedStorage</span>, <span class="ident">StyledWidget</span>, <span class="ident">Widget</span>,
+    },
+    <span class="ident">renderer</span>::{<span class="ident">Renderer</span>, <span class="ident">StrokeOptions</span>, <span class="ident">TextOptions</span>},
     <span class="ident">widgets::component</span>::{<span class="ident">Behavior</span>, <span class="ident">ComponentBuilder</span>, <span class="ident">Content</span>, <span class="ident">ContentBuilder</span>},
     <span class="ident">App</span>,
 };
@@ -323,6 +328,15 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Renderer</span> <span class="kw">for</span> <span class="ident">CanvasRenderer</span> {
+    <span class="kw">fn</span> <span class="ident">theme</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SystemTheme</span> {
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;frontend-kludgine&quot;</span>)]</span>
+            <span class="self">Self</span><span class="ident">::RasterizerRenderer</span>(<span class="ident">renderer</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">renderer</span>.<span class="ident">theme</span>(),
+            <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;frontend-browser&quot;</span>)]</span>
+            <span class="self">Self</span><span class="ident">::BrowserRenderer</span>(<span class="ident">renderer</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">renderer</span>.<span class="ident">theme</span>(),
+        }
+    }
+
     <span class="kw">fn</span> <span class="ident">size</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">gooey::core::euclid::Size2D</span><span class="op">&lt;</span><span class="ident">f32</span>, <span class="ident">gooey::core::Points</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span> {
             <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;frontend-kludgine&quot;</span>)]</span>
@@ -361,64 +375,54 @@
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">render_text</span><span class="op">&lt;</span>
-        <span class="ident">F</span>: <span class="ident">gooey::core::styles::FallbackComponent</span><span class="op">&lt;</span><span class="ident">Value</span> <span class="op">=</span> <span class="ident">gooey::core::styles::ColorPair</span><span class="op">&gt;</span>,
-    <span class="op">&gt;</span>(
+    <span class="kw">fn</span> <span class="ident">render_text</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">text</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">baseline_origin</span>: <span class="ident">gooey::core::euclid::Point2D</span><span class="op">&lt;</span><span class="ident">f32</span>, <span class="ident">gooey::core::Points</span><span class="op">&gt;</span>,
-        <span class="ident">style</span>: <span class="kw-2">&amp;</span><span class="ident">gooey::core::styles::Style</span>,
+        <span class="ident">options</span>: <span class="kw-2">&amp;</span><span class="ident">TextOptions</span>,
     ) {
         <span class="kw">match</span> <span class="self">self</span> {
             <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;frontend-kludgine&quot;</span>)]</span>
             <span class="self">Self</span><span class="ident">::RasterizerRenderer</span>(<span class="ident">renderer</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">renderer</span>.<span class="ident">render_text</span>::<span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="ident">text</span>, <span class="ident">baseline_origin</span>, <span class="ident">style</span>)
+                <span class="ident">renderer</span>.<span class="ident">render_text</span>(<span class="ident">text</span>, <span class="ident">baseline_origin</span>, <span class="ident">options</span>)
             }
             <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;frontend-browser&quot;</span>)]</span>
-            <span class="self">Self</span><span class="ident">::BrowserRenderer</span>(<span class="ident">renderer</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">renderer</span>.<span class="ident">render_text</span>::<span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="ident">text</span>, <span class="ident">baseline_origin</span>, <span class="ident">style</span>)
-            }
+            <span class="self">Self</span><span class="ident">::BrowserRenderer</span>(<span class="ident">renderer</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">renderer</span>.<span class="ident">render_text</span>(<span class="ident">text</span>, <span class="ident">baseline_origin</span>, <span class="ident">options</span>),
         }
     }
 
     <span class="kw">fn</span> <span class="ident">measure_text</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">text</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-        <span class="ident">style</span>: <span class="kw-2">&amp;</span><span class="ident">gooey::core::styles::Style</span>,
+        <span class="ident">options</span>: <span class="kw-2">&amp;</span><span class="ident">TextOptions</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">gooey::renderer::TextMetrics</span><span class="op">&lt;</span><span class="ident">gooey::core::Points</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span> {
             <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;frontend-kludgine&quot;</span>)]</span>
-            <span class="self">Self</span><span class="ident">::RasterizerRenderer</span>(<span class="ident">renderer</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">renderer</span>.<span class="ident">measure_text</span>(<span class="ident">text</span>, <span class="ident">style</span>),
+            <span class="self">Self</span><span class="ident">::RasterizerRenderer</span>(<span class="ident">renderer</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">renderer</span>.<span class="ident">measure_text</span>(<span class="ident">text</span>, <span class="ident">options</span>),
             <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;frontend-browser&quot;</span>)]</span>
-            <span class="self">Self</span><span class="ident">::BrowserRenderer</span>(<span class="ident">renderer</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">renderer</span>.<span class="ident">measure_text</span>(<span class="ident">text</span>, <span class="ident">style</span>),
+            <span class="self">Self</span><span class="ident">::BrowserRenderer</span>(<span class="ident">renderer</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">renderer</span>.<span class="ident">measure_text</span>(<span class="ident">text</span>, <span class="ident">options</span>),
         }
     }
 
     <span class="kw">fn</span> <span class="ident">stroke_rect</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">rect</span>: <span class="kw-2">&amp;</span><span class="ident">gooey::core::euclid::Rect</span><span class="op">&lt;</span><span class="ident">f32</span>, <span class="ident">gooey::core::Points</span><span class="op">&gt;</span>,
-        <span class="ident">style</span>: <span class="kw-2">&amp;</span><span class="ident">gooey::core::styles::Style</span>,
+        <span class="ident">options</span>: <span class="kw-2">&amp;</span><span class="ident">StrokeOptions</span>,
     ) {
         <span class="kw">match</span> <span class="self">self</span> {
             <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;frontend-kludgine&quot;</span>)]</span>
-            <span class="self">Self</span><span class="ident">::RasterizerRenderer</span>(<span class="ident">renderer</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">renderer</span>.<span class="ident">stroke_rect</span>(<span class="ident">rect</span>, <span class="ident">style</span>),
+            <span class="self">Self</span><span class="ident">::RasterizerRenderer</span>(<span class="ident">renderer</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">renderer</span>.<span class="ident">stroke_rect</span>(<span class="ident">rect</span>, <span class="ident">options</span>),
             <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;frontend-browser&quot;</span>)]</span>
-            <span class="self">Self</span><span class="ident">::BrowserRenderer</span>(<span class="ident">renderer</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">renderer</span>.<span class="ident">stroke_rect</span>(<span class="ident">rect</span>, <span class="ident">style</span>),
+            <span class="self">Self</span><span class="ident">::BrowserRenderer</span>(<span class="ident">renderer</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">renderer</span>.<span class="ident">stroke_rect</span>(<span class="ident">rect</span>, <span class="ident">options</span>),
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">fill_rect</span><span class="op">&lt;</span>
-        <span class="ident">F</span>: <span class="ident">gooey::core::styles::FallbackComponent</span><span class="op">&lt;</span><span class="ident">Value</span> <span class="op">=</span> <span class="ident">gooey::core::styles::ColorPair</span><span class="op">&gt;</span>,
-    <span class="op">&gt;</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">rect</span>: <span class="kw-2">&amp;</span><span class="ident">gooey::core::euclid::Rect</span><span class="op">&lt;</span><span class="ident">f32</span>, <span class="ident">gooey::core::Points</span><span class="op">&gt;</span>,
-        <span class="ident">style</span>: <span class="kw-2">&amp;</span><span class="ident">gooey::core::styles::Style</span>,
-    ) {
+    <span class="kw">fn</span> <span class="ident">fill_rect</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">rect</span>: <span class="kw-2">&amp;</span><span class="ident">gooey::core::euclid::Rect</span><span class="op">&lt;</span><span class="ident">f32</span>, <span class="ident">gooey::core::Points</span><span class="op">&gt;</span>, <span class="ident">color</span>: <span class="ident">Color</span>) {
         <span class="kw">match</span> <span class="self">self</span> {
             <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;frontend-kludgine&quot;</span>)]</span>
-            <span class="self">Self</span><span class="ident">::RasterizerRenderer</span>(<span class="ident">renderer</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">renderer</span>.<span class="ident">fill_rect</span>::<span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="ident">rect</span>, <span class="ident">style</span>),
+            <span class="self">Self</span><span class="ident">::RasterizerRenderer</span>(<span class="ident">renderer</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">renderer</span>.<span class="ident">fill_rect</span>(<span class="ident">rect</span>, <span class="ident">color</span>),
             <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;frontend-browser&quot;</span>)]</span>
-            <span class="self">Self</span><span class="ident">::BrowserRenderer</span>(<span class="ident">renderer</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">renderer</span>.<span class="ident">fill_rect</span>::<span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="ident">rect</span>, <span class="ident">style</span>),
+            <span class="self">Self</span><span class="ident">::BrowserRenderer</span>(<span class="ident">renderer</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">renderer</span>.<span class="ident">fill_rect</span>(<span class="ident">rect</span>, <span class="ident">color</span>),
         }
     }
 
@@ -426,13 +430,13 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">point_a</span>: <span class="ident">gooey::core::euclid::Point2D</span><span class="op">&lt;</span><span class="ident">f32</span>, <span class="ident">gooey::core::Points</span><span class="op">&gt;</span>,
         <span class="ident">point_b</span>: <span class="ident">gooey::core::euclid::Point2D</span><span class="op">&lt;</span><span class="ident">f32</span>, <span class="ident">gooey::core::Points</span><span class="op">&gt;</span>,
-        <span class="ident">style</span>: <span class="kw-2">&amp;</span><span class="ident">gooey::core::styles::Style</span>,
+        <span class="ident">options</span>: <span class="kw-2">&amp;</span><span class="ident">StrokeOptions</span>,
     ) {
         <span class="kw">match</span> <span class="self">self</span> {
             <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;frontend-kludgine&quot;</span>)]</span>
-            <span class="self">Self</span><span class="ident">::RasterizerRenderer</span>(<span class="ident">renderer</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">renderer</span>.<span class="ident">stroke_line</span>(<span class="ident">point_a</span>, <span class="ident">point_b</span>, <span class="ident">style</span>),
+            <span class="self">Self</span><span class="ident">::RasterizerRenderer</span>(<span class="ident">renderer</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">renderer</span>.<span class="ident">stroke_line</span>(<span class="ident">point_a</span>, <span class="ident">point_b</span>, <span class="ident">options</span>),
             <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;frontend-browser&quot;</span>)]</span>
-            <span class="self">Self</span><span class="ident">::BrowserRenderer</span>(<span class="ident">renderer</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">renderer</span>.<span class="ident">stroke_line</span>(<span class="ident">point_a</span>, <span class="ident">point_b</span>, <span class="ident">style</span>),
+            <span class="self">Self</span><span class="ident">::BrowserRenderer</span>(<span class="ident">renderer</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">renderer</span>.<span class="ident">stroke_line</span>(<span class="ident">point_a</span>, <span class="ident">point_b</span>, <span class="ident">options</span>),
         }
     }
 }
