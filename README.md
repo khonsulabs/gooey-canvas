@@ -23,9 +23,9 @@ Or as the content of a [`Component`](https://gooey.rs/main/gooey/widgets/compone
 ```rust
 builder
     .on_render(|renderer: CanvasRenderer| {
-        renderer.fill_rect::<BackgroundColor>(
+        renderer.fill_rect(
             &renderer.bounds().inflate(-64., -64.),
-            &Style::default().with(BackgroundColor(Color::new(1., 0., 0., 1.).into())),
+            Color::new(1., 0., 0., 1.),
         );
     })
     .finish()

@@ -1,5 +1,5 @@
 use gooey::{
-    core::styles::{BackgroundColor, Color, Style},
+    core::styles::Color,
     renderer::Renderer,
     widgets::component::{Behavior, Component},
     App,
@@ -34,9 +34,9 @@ impl Behavior for Basic {
     ) -> gooey::core::StyledWidget<Self::Content> {
         builder
             .on_render(|renderer: CanvasRenderer| {
-                renderer.fill_rect::<BackgroundColor>(
+                renderer.fill_rect(
                     &renderer.bounds().inflate(-64., -64.),
-                    &Style::default().with(BackgroundColor(Color::new(1., 0., 0., 1.).into())),
+                    Color::new(1., 0., 0., 1.),
                 );
             })
             .finish()

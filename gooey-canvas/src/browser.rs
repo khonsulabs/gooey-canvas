@@ -1,14 +1,14 @@
 use gooey::{
     core::{
         euclid::{Length, Point2D, Rect, Scale, Size2D},
-        styles::{ColorPair, ForegroundColor, Style, SystemTheme},
+        styles::{Color, SystemTheme},
         Context, Points, TransmogrifierContext, WidgetId,
     },
     frontends::browser::{
         utils::{create_element, widget_css_id, window_document, CssRules},
         RegisteredTransmogrifier, WebSys, WebSysTransmogrifier,
     },
-    renderer::{Renderer, TextMetrics},
+    renderer::{Renderer, StrokeOptions, TextMetrics, TextOptions},
 };
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
@@ -122,6 +122,10 @@ pub struct BrowserRenderer {
 }
 
 impl Renderer for BrowserRenderer {
+    fn theme(&self) -> SystemTheme {
+        self.theme
+    }
+
     fn size(&self) -> gooey::core::euclid::Size2D<f32, Points> {
         self.clip.size.to_f32()
     }
@@ -142,21 +146,16 @@ impl Renderer for BrowserRenderer {
         Scale::new(web_sys::window().unwrap().device_pixel_ratio() as f32)
     }
 
-    fn render_text<F: gooey::core::styles::FallbackComponent<Value = ColorPair>>(
+    fn render_text(
         &self,
         text: &str,
         baseline_origin: Point2D<f32, Points>,
-        style: &Style,
+        options: &TextOptions,
     ) {
-        let color = style
-            .get_with_fallback::<F>()
-            .cloned()
-            .unwrap_or_default()
-            .themed_color(self.theme);
         if let Some(context) = self.rendering_context() {
             context.save();
             self.clip(&context);
-            context.set_fill_style(&JsValue::from_str(&color.as_css_string()));
+            context.set_fill_style(&JsValue::from_str(&options.color.as_css_string()));
             context
                 .fill_text(text, baseline_origin.x as f64, baseline_origin.y as f64)
                 .unwrap();
@@ -164,8 +163,9 @@ impl Renderer for BrowserRenderer {
         }
     }
 
-    fn measure_text(&self, text: &str, _style: &Style) -> TextMetrics<Points> {
+    fn measure_text(&self, text: &str, _options: &TextOptions) -> TextMetrics<Points> {
         if let Some(context) = self.rendering_context() {
+            // TODO handle text options
             let metrics = ExtendedTextMetrics::from(context.measure_text(&text).unwrap());
             TextMetrics {
                 width: Length::new(metrics.width() as f32),
@@ -178,16 +178,12 @@ impl Renderer for BrowserRenderer {
         }
     }
 
-    fn stroke_rect(&self, rect: &Rect<f32, Points>, style: &Style) {
-        let color = style
-            .get_with_fallback::<ForegroundColor>()
-            .cloned()
-            .unwrap_or_default()
-            .themed_color(self.theme);
+    fn stroke_rect(&self, rect: &Rect<f32, Points>, options: &StrokeOptions) {
         if let Some(context) = self.rendering_context() {
             context.save();
             self.clip(&context);
-            context.set_stroke_style(&JsValue::from_str(&color.as_css_string()));
+            // TODO handle line width
+            context.set_stroke_style(&JsValue::from_str(&options.color.as_css_string()));
             let rect = rect.to_f64();
             context.stroke_rect(
                 rect.origin.x,
@@ -199,16 +195,7 @@ impl Renderer for BrowserRenderer {
         }
     }
 
-    fn fill_rect<F: gooey::core::styles::FallbackComponent<Value = ColorPair>>(
-        &self,
-        rect: &Rect<f32, Points>,
-        style: &Style,
-    ) {
-        let color = style
-            .get_with_fallback::<F>()
-            .cloned()
-            .unwrap_or_default()
-            .themed_color(self.theme);
+    fn fill_rect(&self, rect: &Rect<f32, Points>, color: Color) {
         if let Some(context) = self.rendering_context() {
             context.save();
             self.clip(&context);
@@ -228,17 +215,13 @@ impl Renderer for BrowserRenderer {
         &self,
         point_a: Point2D<f32, Points>,
         point_b: Point2D<f32, Points>,
-        style: &Style,
+        options: &StrokeOptions,
     ) {
-        let color = style
-            .get_with_fallback::<ForegroundColor>()
-            .cloned()
-            .unwrap_or_default()
-            .themed_color(self.theme);
         if let Some(context) = self.rendering_context() {
             context.save();
             self.clip(&context);
-            context.set_stroke_style(&JsValue::from_str(&color.as_css_string()));
+            // TODO handle line width
+            context.set_stroke_style(&JsValue::from_str(&options.color.as_css_string()));
             context.begin_path();
             let point_a = point_a.to_f64();
             context.move_to(point_a.x, point_a.y);

@@ -2,8 +2,11 @@ use std::fmt::Debug;
 
 use browser::BrowserRenderer;
 use gooey::{
-    core::{KeyedStorage, StyledWidget, Widget},
-    renderer::Renderer,
+    core::{
+        styles::{Color, SystemTheme},
+        KeyedStorage, StyledWidget, Widget,
+    },
+    renderer::{Renderer, StrokeOptions, TextOptions},
     widgets::component::{Behavior, ComponentBuilder, Content, ContentBuilder},
     App,
 };
@@ -82,6 +85,15 @@ pub enum CanvasRenderer {
 }
 
 impl Renderer for CanvasRenderer {
+    fn theme(&self) -> SystemTheme {
+        match self {
+            #[cfg(feature = "frontend-kludgine")]
+            Self::RasterizerRenderer(renderer) => renderer.theme(),
+            #[cfg(feature = "frontend-browser")]
+            Self::BrowserRenderer(renderer) => renderer.theme(),
+        }
+    }
+
     fn size(&self) -> gooey::core::euclid::Size2D<f32, gooey::core::Points> {
         match self {
             #[cfg(feature = "frontend-kludgine")]
@@ -120,64 +132,54 @@ impl Renderer for CanvasRenderer {
         }
     }
 
-    fn render_text<
-        F: gooey::core::styles::FallbackComponent<Value = gooey::core::styles::ColorPair>,
-    >(
+    fn render_text(
         &self,
         text: &str,
         baseline_origin: gooey::core::euclid::Point2D<f32, gooey::core::Points>,
-        style: &gooey::core::styles::Style,
+        options: &TextOptions,
     ) {
         match self {
             #[cfg(feature = "frontend-kludgine")]
             Self::RasterizerRenderer(renderer) => {
-                renderer.render_text::<F>(text, baseline_origin, style)
+                renderer.render_text(text, baseline_origin, options)
             }
             #[cfg(feature = "frontend-browser")]
-            Self::BrowserRenderer(renderer) => {
-                renderer.render_text::<F>(text, baseline_origin, style)
-            }
+            Self::BrowserRenderer(renderer) => renderer.render_text(text, baseline_origin, options),
         }
     }
 
     fn measure_text(
         &self,
         text: &str,
-        style: &gooey::core::styles::Style,
+        options: &TextOptions,
     ) -> gooey::renderer::TextMetrics<gooey::core::Points> {
         match self {
             #[cfg(feature = "frontend-kludgine")]
-            Self::RasterizerRenderer(renderer) => renderer.measure_text(text, style),
+            Self::RasterizerRenderer(renderer) => renderer.measure_text(text, options),
             #[cfg(feature = "frontend-browser")]
-            Self::BrowserRenderer(renderer) => renderer.measure_text(text, style),
+            Self::BrowserRenderer(renderer) => renderer.measure_text(text, options),
         }
     }
 
     fn stroke_rect(
         &self,
         rect: &gooey::core::euclid::Rect<f32, gooey::core::Points>,
-        style: &gooey::core::styles::Style,
+        options: &StrokeOptions,
     ) {
         match self {
             #[cfg(feature = "frontend-kludgine")]
-            Self::RasterizerRenderer(renderer) => renderer.stroke_rect(rect, style),
+            Self::RasterizerRenderer(renderer) => renderer.stroke_rect(rect, options),
             #[cfg(feature = "frontend-browser")]
-            Self::BrowserRenderer(renderer) => renderer.stroke_rect(rect, style),
+            Self::BrowserRenderer(renderer) => renderer.stroke_rect(rect, options),
         }
     }
 
-    fn fill_rect<
-        F: gooey::core::styles::FallbackComponent<Value = gooey::core::styles::ColorPair>,
-    >(
-        &self,
-        rect: &gooey::core::euclid::Rect<f32, gooey::core::Points>,
-        style: &gooey::core::styles::Style,
-    ) {
+    fn fill_rect(&self, rect: &gooey::core::euclid::Rect<f32, gooey::core::Points>, color: Color) {
         match self {
             #[cfg(feature = "frontend-kludgine")]
-            Self::RasterizerRenderer(renderer) => renderer.fill_rect::<F>(rect, style),
+            Self::RasterizerRenderer(renderer) => renderer.fill_rect(rect, color),
             #[cfg(feature = "frontend-browser")]
-            Self::BrowserRenderer(renderer) => renderer.fill_rect::<F>(rect, style),
+            Self::BrowserRenderer(renderer) => renderer.fill_rect(rect, color),
         }
     }
 
@@ -185,13 +187,13 @@ impl Renderer for CanvasRenderer {
         &self,
         point_a: gooey::core::euclid::Point2D<f32, gooey::core::Points>,
         point_b: gooey::core::euclid::Point2D<f32, gooey::core::Points>,
-        style: &gooey::core::styles::Style,
+        options: &StrokeOptions,
     ) {
         match self {
             #[cfg(feature = "frontend-kludgine")]
-            Self::RasterizerRenderer(renderer) => renderer.stroke_line(point_a, point_b, style),
+            Self::RasterizerRenderer(renderer) => renderer.stroke_line(point_a, point_b, options),
             #[cfg(feature = "frontend-browser")]
-            Self::BrowserRenderer(renderer) => renderer.stroke_line(point_a, point_b, style),
+            Self::BrowserRenderer(renderer) => renderer.stroke_line(point_a, point_b, options),
         }
     }
 }
