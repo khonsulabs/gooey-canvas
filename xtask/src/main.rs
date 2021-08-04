@@ -1,4 +1,5 @@
 use devx_cmd::run;
+use fs_extra::dir::CopyOptions;
 use khonsu_tools::{anyhow, code_coverage::CodeCoverage};
 use structopt::StructOpt;
 
@@ -28,11 +29,21 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn build_browser_example(name: String) -> Result<(), devx_cmd::Error> {
+fn build_browser_example(name: String) -> Result<(), anyhow::Error> {
     build_regular_browser_example(&name)?;
     execute_wasm_bindgen(
         &format!("target/wasm32-unknown-unknown/debug/examples/{}.wasm", name),
         "gooey-canvas/examples/browser/pkg/",
+    )?;
+
+    fs_extra::copy_items(
+        &["gooey-canvas/assets"],
+        &"gooey-canvas/examples/browser/assets",
+        &CopyOptions {
+            skip_exist: true,
+            copy_inside: true,
+            ..CopyOptions::default()
+        },
     )?;
 
     let index_path = format!("index.html?{}", name);

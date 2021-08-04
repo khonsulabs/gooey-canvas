@@ -1,40 +1,69 @@
 use gooey::{
-    core::styles::Color,
+    core::{
+        assets::{Asset, Image},
+        euclid::Point2D,
+        styles::Color,
+        Callback, Context,
+    },
     renderer::Renderer,
-    widgets::component::{Behavior, Component},
+    widgets::component::{Behavior, Component, ComponentCommand},
     App,
 };
-use gooey_canvas::{AppExt, Canvas, CanvasRenderer};
+use gooey_canvas::{AppExt, Canvas, CanvasRenderer, Command};
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod harness;
 
 fn app() -> App {
-    App::from_root(|storage| Component::new(Basic::default(), storage))
-        .with_canvas()
-        .with_component::<Basic>()
+    App::from_root(|storage| {
+        Component::new(
+            Basic {
+                image: Image::new(Asset::build().path(vec!["rolls.jpg"]).finish()),
+            },
+            storage,
+        )
+    })
+    .with_canvas()
+    .with_component::<Basic>()
 }
 
 fn main() {
     app().run()
 }
 
-#[derive(Debug, Default)]
-struct Basic {}
+#[derive(Debug)]
+struct Basic {
+    image: Image,
+}
 
 impl Behavior for Basic {
     type Content = Canvas;
     type Event = ();
     type Widgets = ();
 
+    fn initialize(component: &mut Component<Self>, context: &Context<Component<Self>>) {
+        let callback_context = context.clone();
+        component.behavior.image.load(
+            component.map_event(move |_| {
+                log::info!("Image loaded");
+                callback_context.send_command(ComponentCommand::Widget(Command::Refresh))
+            }),
+            Callback::new(|err| panic!("error loading asset: {}", err)),
+            context.frontend.as_ref(),
+        )
+    }
+
     fn build_content(
         &mut self,
         builder: <Self::Content as gooey::widgets::component::Content<Self>>::Builder,
         _events: &gooey::widgets::component::EventMapper<Self>,
     ) -> gooey::core::StyledWidget<Self::Content> {
+        let image = self.image.clone();
         builder
-            .on_render(|renderer: CanvasRenderer| {
+            .on_render(move |renderer: CanvasRenderer| {
+                log::info!("Rendering");
                 renderer.fill_rect(&renderer.bounds().inflate(-64., -64.), Color::RED);
+                renderer.draw_image(&image, Point2D::new(128., 128.));
             })
             .finish()
     }
@@ -44,7 +73,10 @@ impl Behavior for Basic {
         _event: Self::Event,
         _context: &gooey::core::Context<gooey::widgets::component::Component<Self>>,
     ) {
-        unimplemented!()
+    }
+
+    fn classes() -> Option<gooey::core::styles::style_sheet::Classes> {
+        None
     }
 }
 

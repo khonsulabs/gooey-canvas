@@ -1,2 +1,3 @@
 [workspace]
 members = ["gooey-canvas", "xtask"]
+resolver = "2"

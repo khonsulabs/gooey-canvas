@@ -4,3 +4,4 @@ Cargo.lock
 coverage/
 pkg/
 .vscode/
+/gooey-canvas/examples/browser/assets

@@ -196,6 +196,19 @@ impl Renderer for CanvasRenderer {
             Self::BrowserRenderer(renderer) => renderer.stroke_line(point_a, point_b, options),
         }
     }
+
+    fn draw_image(
+        &self,
+        image: &gooey::core::assets::Image,
+        location: gooey::core::euclid::Point2D<f32, gooey::core::Points>,
+    ) {
+        match self {
+            #[cfg(feature = "frontend-kludgine")]
+            Self::RasterizerRenderer(renderer) => renderer.draw_image(image, location),
+            #[cfg(feature = "frontend-browser")]
+            Self::BrowserRenderer(renderer) => renderer.draw_image(image, location),
+        }
+    }
 }
 
 impl<B: Behavior<Widgets = ()>> Content<B> for Canvas {

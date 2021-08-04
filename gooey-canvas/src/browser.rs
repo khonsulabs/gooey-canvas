@@ -2,16 +2,16 @@ use gooey::{
     core::{
         euclid::{Length, Point2D, Rect, Scale, Size2D},
         styles::{Color, SystemTheme},
-        Context, Points, TransmogrifierContext, WidgetId,
+        Context, Pixels, Points, TransmogrifierContext, WidgetId,
     },
     frontends::browser::{
         utils::{create_element, widget_css_id, window_document, CssRules},
-        RegisteredTransmogrifier, WebSys, WebSysTransmogrifier,
+        ImageExt, RegisteredTransmogrifier, WebSys, WebSysTransmogrifier,
     },
     renderer::{Renderer, StrokeOptions, TextMetrics, TextOptions},
 };
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
-use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
+use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, HtmlImageElement};
 
 use crate::{Canvas, CanvasRenderer, CanvasTransmogrifier, Command};
 
@@ -68,6 +68,7 @@ impl CanvasTransmogrifier {
                         widget,
                         clip: Rect::from_size(size.to_f64()),
                         theme: context.frontend.theme(),
+                        scale: Scale::new(web_sys::window().unwrap().device_pixel_ratio() as f32),
                     };
                     canvas
                         .renderable
@@ -114,11 +115,19 @@ impl WebSysTransmogrifier for CanvasTransmogrifier {
     }
 }
 
+/// Renderer implementation that uses [`CanvasRenderingContext2d`].
+///
+/// ## User interface scaling (Points)
+///
+/// The renderer uses
+/// [`Window::device_pixel_ratio()`](web_sys::Window::device_pixel_ratio) to
+/// scale between [`Points`] and [`Pixels`].
 #[derive(Debug)]
 pub struct BrowserRenderer {
     widget: WidgetId,
-    clip: Rect<f64, Points>,
+    clip: Rect<f64, Pixels>,
     theme: SystemTheme,
+    scale: Scale<f32, Points, Pixels>,
 }
 
 impl Renderer for BrowserRenderer {
@@ -126,24 +135,28 @@ impl Renderer for BrowserRenderer {
         self.theme
     }
 
-    fn size(&self) -> gooey::core::euclid::Size2D<f32, Points> {
-        self.clip.size.to_f32()
+    fn size(&self) -> Size2D<f32, Points> {
+        self.clip.size.to_f32() / self.scale
     }
 
     fn clip_to(&self, bounds: Rect<f32, Points>) -> Self {
         Self {
             widget: self.widget.clone(),
-            clip: self.clip.intersection(&bounds.to_f64()).unwrap_or_default(),
+            clip: self
+                .clip
+                .intersection(&(bounds * self.scale).to_f64())
+                .unwrap_or_default(),
             theme: self.theme,
+            scale: self.scale,
         }
     }
 
     fn clip_bounds(&self) -> Rect<f32, Points> {
-        self.clip.to_f32()
+        self.clip.to_f32() / self.scale
     }
 
-    fn scale(&self) -> gooey::core::euclid::Scale<f32, Points, gooey::core::Pixels> {
-        Scale::new(web_sys::window().unwrap().device_pixel_ratio() as f32)
+    fn scale(&self) -> Scale<f32, Points, Pixels> {
+        self.scale
     }
 
     fn render_text(
@@ -166,7 +179,7 @@ impl Renderer for BrowserRenderer {
     fn measure_text(&self, text: &str, _options: &TextOptions) -> TextMetrics<Points> {
         if let Some(context) = self.rendering_context() {
             // TODO handle text options
-            let metrics = ExtendedTextMetrics::from(context.measure_text(&text).unwrap());
+            let metrics = ExtendedTextMetrics::from(context.measure_text(text).unwrap());
             TextMetrics {
                 width: Length::new(metrics.width() as f32),
                 ascent: Length::new(metrics.actual_bounding_box_ascent() as f32),
@@ -184,6 +197,7 @@ impl Renderer for BrowserRenderer {
             self.clip(&context);
             // TODO handle line width
             context.set_stroke_style(&JsValue::from_str(&options.color.as_css_string()));
+            context.set_line_width(options.line_width.get() as f64);
             let rect = rect.to_f64();
             context.stroke_rect(
                 rect.origin.x,
@@ -229,6 +243,24 @@ impl Renderer for BrowserRenderer {
             context.line_to(point_b.x, point_b.y);
             context.stroke();
             context.restore();
+        }
+    }
+
+    fn draw_image(&self, image: &gooey::core::assets::Image, location: Point2D<f32, Points>) {
+        if let Some(context) = self.rendering_context() {
+            if let Some(css_id) = image.css_id() {
+                if let Some(element) = window_document().get_element_by_id(&css_id) {
+                    let element = element.unchecked_into::<HtmlImageElement>();
+                    context.save();
+                    self.clip(&context);
+
+                    let location = location.to_f64();
+                    context
+                        .draw_image_with_html_image_element(&element, location.x, location.y)
+                        .unwrap();
+                    context.restore();
+                }
+            }
         }
     }
 }
