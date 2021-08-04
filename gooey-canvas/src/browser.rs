@@ -1,15 +1,21 @@
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
+
 use gooey::{
     core::{
         euclid::{Length, Point2D, Rect, Scale, Size2D},
-        styles::{Color, SystemTheme},
+        styles::{Color, Style, SystemTheme},
         Context, Pixels, Points, TransmogrifierContext, WidgetId,
     },
     frontends::browser::{
-        utils::{create_element, widget_css_id, window_document, CssRules},
+        utils::{create_element, widget_css_id, window_document, CssBlockBuilder, CssRules},
         ImageExt, RegisteredTransmogrifier, WebSys, WebSysTransmogrifier,
     },
     renderer::{Renderer, StrokeOptions, TextMetrics, TextOptions},
 };
+use js_sys::Function;
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, HtmlImageElement};
 
@@ -50,31 +56,19 @@ impl BrowserRenderer {
 
 impl CanvasTransmogrifier {
     fn redraw(&self, context: &mut TransmogrifierContext<'_, CanvasTransmogrifier, WebSys>) {
-        let context = Context::new(context.channels, context.frontend);
-        let cb = Closure::once_into_js(move || {
-            context.map_mut(|canvas, context| {
-                let widget = context.widget().registration().unwrap().id().clone();
-                if let Some(canvas_element) = canvas_element(&widget) {
-                    let size = Size2D::new(
-                        canvas_element.client_width(),
-                        canvas_element.client_height(),
-                    )
-                    .max(Size2D::default())
-                    .to_u32();
-                    canvas_element.set_width(size.width);
-                    canvas_element.set_height(size.height);
+        let widget_context = Context::new(context.channels, context.frontend);
+        request_animation_frame(
+            widget_context,
+            context.state.redraw_already_requested.clone(),
+        );
+    }
+}
 
-                    let renderer = BrowserRenderer {
-                        widget,
-                        clip: Rect::from_size(size.to_f64()),
-                        theme: context.frontend.theme(),
-                        scale: Scale::new(web_sys::window().unwrap().device_pixel_ratio() as f32),
-                    };
-                    canvas
-                        .renderable
-                        .render(CanvasRenderer::BrowserRenderer(renderer));
-                }
-            });
+fn request_animation_frame(context: Context<Canvas>, already_requested: Arc<AtomicBool>) {
+    if !already_requested.fetch_or(true, Ordering::SeqCst) {
+        let cb = Closure::once_into_js(move || {
+            already_requested.store(false, Ordering::SeqCst);
+            draw_frame(context);
         });
         web_sys::window()
             .unwrap()
@@ -83,8 +77,34 @@ impl CanvasTransmogrifier {
     }
 }
 
+fn draw_frame(context: Context<Canvas>) {
+    context.map_mut(|canvas, context| {
+        let widget = context.widget().registration().unwrap().id().clone();
+        if let Some(canvas_element) = canvas_element(&widget) {
+            let size = Size2D::new(
+                canvas_element.client_width(),
+                canvas_element.client_height(),
+            )
+            .max(Size2D::default())
+            .to_u32();
+            canvas_element.set_width(size.width);
+            canvas_element.set_height(size.height);
+
+            let renderer = BrowserRenderer {
+                widget,
+                clip: Rect::from_size(size.to_f64()),
+                theme: context.frontend.theme(),
+                scale: Scale::new(web_sys::window().unwrap().device_pixel_ratio() as f32),
+            };
+            canvas
+                .renderable
+                .render(CanvasRenderer::BrowserRenderer(renderer));
+        }
+    });
+}
+
 impl gooey::core::Transmogrifier<WebSys> for CanvasTransmogrifier {
-    type State = Option<CssRules>;
+    type State = State;
     type Widget = Canvas;
 
     fn receive_command(
@@ -106,12 +126,30 @@ impl WebSysTransmogrifier for CanvasTransmogrifier {
         let css = self
             .initialize_widget_element(&element, &context)
             .unwrap_or_default();
+        context.state.css = Some(css);
 
-        *context.state = Some(css);
+        // Setup a refresh-on-resize callback.
+        let widget_context = Context::from(&context);
+        let already_requested = context.state.redraw_already_requested.clone();
+        let onresize = Closure::wrap(Box::new(move || {
+            request_animation_frame(widget_context.clone(), already_requested.clone());
+        }) as Box<dyn Fn()>)
+        .into_js_value();
+        web_sys::window()
+            .unwrap()
+            .add_event_listener_with_callback("resize", &Function::from(onresize))
+            .unwrap();
 
+        // Initialize the canvas by drawing a frame.
         self.redraw(&mut context);
 
         Some(element.unchecked_into())
+    }
+
+    fn convert_style_to_css(&self, style: &Style, css: CssBlockBuilder) -> CssBlockBuilder {
+        self.convert_standard_components_to_css(style, css)
+            .with_css_statement("width: 100%")
+            .with_css_statement("height: 100%")
     }
 }
 
@@ -303,4 +341,10 @@ impl ExtendedTextMetrics {
     pub fn height(&self) -> f64 {
         self.actual_bounding_box_ascent() + self.actual_bounding_box_descent()
     }
+}
+
+#[derive(Debug, Default)]
+pub struct State {
+    redraw_already_requested: Arc<AtomicBool>,
+    css: Option<CssRules>,
 }

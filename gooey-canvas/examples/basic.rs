@@ -60,7 +60,7 @@ impl Behavior for Basic {
         let image = self.image.clone();
         builder
             .on_render(move |renderer: CanvasRenderer| {
-                renderer.fill_rect(&renderer.bounds().inflate(-64., -64.), Color::RED);
+                renderer.fill_rect(&renderer.bounds().inflate(-64., -64.), Color::DARKBLUE);
                 renderer.draw_image(&image, Point2D::new(128., 128.));
             })
             .finish()
