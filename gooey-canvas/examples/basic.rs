@@ -18,7 +18,7 @@ fn app() -> App {
     App::from_root(|storage| {
         Component::new(
             Basic {
-                image: Image::new(Asset::build().path(vec!["rolls.jpg"]).finish()),
+                image: Image::from(Asset::build().path(vec!["rolls.jpg"]).finish()),
             },
             storage,
         )
