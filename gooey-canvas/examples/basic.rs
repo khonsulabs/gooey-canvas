@@ -45,7 +45,6 @@ impl Behavior for Basic {
         let callback_context = context.clone();
         component.behavior.image.load(
             component.map_event(move |_| {
-                log::info!("Image loaded");
                 callback_context.send_command(ComponentCommand::Widget(Command::Refresh))
             }),
             Callback::new(|err| panic!("error loading asset: {}", err)),
@@ -61,7 +60,6 @@ impl Behavior for Basic {
         let image = self.image.clone();
         builder
             .on_render(move |renderer: CanvasRenderer| {
-                log::info!("Rendering");
                 renderer.fill_rect(&renderer.bounds().inflate(-64., -64.), Color::RED);
                 renderer.draw_image(&image, Point2D::new(128., 128.));
             })
