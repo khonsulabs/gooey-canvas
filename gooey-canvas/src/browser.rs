@@ -5,13 +5,20 @@ use std::sync::{
 
 use gooey::{
     core::{
-        euclid::{Length, Point2D, Rect, Scale, Size2D},
+        assets::Image,
+        figures::{
+            DisplayScale, Displayable, Figure, Point, Rect, Rectlike, Scale, Scaled, Size,
+            SizedRect,
+        },
         styles::{Color, Style, SystemTheme},
-        Context, Pixels, Points, TransmogrifierContext, WidgetId,
+        Context, Pixels, TransmogrifierContext, WidgetId,
     },
-    frontends::browser::{
-        utils::{create_element, widget_css_id, window_document, CssBlockBuilder, CssRules},
-        ImageExt, RegisteredTransmogrifier, WebSys, WebSysTransmogrifier,
+    frontends::{
+        browser::{
+            utils::{create_element, widget_css_id, window_document, CssBlockBuilder, CssRules},
+            ImageExt, RegisteredTransmogrifier, WebSys, WebSysTransmogrifier,
+        },
+        rasterizer::{ContentArea, ContentSize},
     },
     renderer::{Renderer, StrokeOptions, TextMetrics, TextOptions},
 };
@@ -81,24 +88,36 @@ fn draw_frame(context: Context<Canvas>) {
     context.map_mut(|canvas, context| {
         let widget = context.widget().registration().unwrap().id().clone();
         if let Some(canvas_element) = canvas_element(&widget) {
-            let size = Size2D::new(
+            let scale = DisplayScale::new(
+                Scale::new(web_sys::window().unwrap().device_pixel_ratio() as f32),
+                Scale::new(1.),
+            );
+
+            let size = Size::<_, Pixels>::new(
                 canvas_element.client_width(),
                 canvas_element.client_height(),
             )
-            .max(Size2D::default())
-            .to_u32();
+            .max(&Size::default())
+            .cast::<u32>();
             canvas_element.set_width(size.width);
             canvas_element.set_height(size.height);
-
+            let size = size.cast::<f32>().to_scaled(&scale);
             let renderer = BrowserRenderer {
                 widget,
-                clip: Rect::from_size(size.to_f64()),
-                theme: context.frontend.theme(),
-                scale: Scale::new(web_sys::window().unwrap().device_pixel_ratio() as f32),
+                clip: SizedRect::from(size.cast::<f64>()),
+                theme: context.frontend().theme(),
+                scale,
             };
-            canvas
-                .renderable
-                .render(CanvasRenderer::BrowserRenderer(renderer));
+            canvas.renderable.render(
+                CanvasRenderer::BrowserRenderer(renderer),
+                &ContentArea {
+                    size: ContentSize {
+                        content: size,
+                        ..ContentSize::default()
+                    },
+                    location: Point::default(),
+                },
+            );
         }
     });
 }
@@ -163,9 +182,9 @@ impl WebSysTransmogrifier for CanvasTransmogrifier {
 #[derive(Debug)]
 pub struct BrowserRenderer {
     widget: WidgetId,
-    clip: Rect<f64, Pixels>,
+    clip: SizedRect<f64, Scaled>,
     theme: SystemTheme,
-    scale: Scale<f32, Points, Pixels>,
+    scale: DisplayScale<f32>,
 }
 
 impl Renderer for BrowserRenderer {
@@ -173,37 +192,39 @@ impl Renderer for BrowserRenderer {
         self.theme
     }
 
-    fn size(&self) -> Size2D<f32, Points> {
-        self.clip.size.to_f32() / self.scale
+    fn size(&self) -> Size<f32, Scaled> {
+        self.clip.size.cast::<f32>()
     }
 
-    fn clip_to(&self, bounds: Rect<f32, Points>) -> Self {
+    fn clip_to(&self, bounds: Rect<f32, Scaled>) -> Self {
         Self {
             widget: self.widget.clone(),
             clip: self
                 .clip
-                .intersection(&(bounds * self.scale).to_f64())
-                .unwrap_or_default(),
+                .intersection(&bounds.cast())
+                .unwrap_or_default()
+                .as_sized(),
             theme: self.theme,
             scale: self.scale,
         }
     }
 
-    fn clip_bounds(&self) -> Rect<f32, Points> {
-        self.clip.to_f32() / self.scale
+    fn clip_bounds(&self) -> Rect<f32, Scaled> {
+        Rect::from(self.clip.cast())
     }
 
-    fn scale(&self) -> Scale<f32, Points, Pixels> {
+    fn scale(&self) -> DisplayScale<f32> {
         self.scale
     }
 
     fn render_text(
         &self,
         text: &str,
-        baseline_origin: Point2D<f32, Points>,
+        baseline_origin: impl Displayable<f32, Pixels = Point<f32, Pixels>>,
         options: &TextOptions,
     ) {
         if let Some(context) = self.rendering_context() {
+            let baseline_origin = baseline_origin.to_pixels(&self.scale);
             context.save();
             self.clip(&context);
             context.set_fill_style(&JsValue::from_str(&options.color.as_css_string()));
@@ -214,29 +235,34 @@ impl Renderer for BrowserRenderer {
         }
     }
 
-    fn measure_text(&self, text: &str, _options: &TextOptions) -> TextMetrics<Points> {
+    fn measure_text(&self, text: &str, _options: &TextOptions) -> TextMetrics<Scaled> {
         if let Some(context) = self.rendering_context() {
             // TODO handle text options
             let metrics = ExtendedTextMetrics::from(context.measure_text(text).unwrap());
             TextMetrics {
-                width: Length::new(metrics.width() as f32),
-                ascent: Length::new(metrics.actual_bounding_box_ascent() as f32),
-                descent: Length::new(metrics.actual_bounding_box_descent() as f32),
-                line_gap: Length::default(),
+                width: Figure::new(metrics.width() as f32),
+                ascent: Figure::new(metrics.actual_bounding_box_ascent() as f32),
+                descent: Figure::new(metrics.actual_bounding_box_descent() as f32),
+                line_gap: Figure::default(),
             }
         } else {
             TextMetrics::default()
         }
     }
 
-    fn stroke_rect(&self, rect: &Rect<f32, Points>, options: &StrokeOptions) {
+    fn stroke_rect(
+        &self,
+        rect: &impl Displayable<f32, Pixels = Rect<f32, Pixels>>,
+        options: &StrokeOptions,
+    ) {
         if let Some(context) = self.rendering_context() {
+            let rect = rect.to_pixels(&self.scale);
             context.save();
             self.clip(&context);
             // TODO handle line width
             context.set_stroke_style(&JsValue::from_str(&options.color.as_css_string()));
             context.set_line_width(options.line_width.get() as f64);
-            let rect = rect.to_f64();
+            let rect = rect.cast::<f64>().as_sized();
             context.stroke_rect(
                 rect.origin.x,
                 rect.origin.y,
@@ -247,12 +273,12 @@ impl Renderer for BrowserRenderer {
         }
     }
 
-    fn fill_rect(&self, rect: &Rect<f32, Points>, color: Color) {
+    fn fill_rect(&self, rect: &impl Displayable<f32, Pixels = Rect<f32, Pixels>>, color: Color) {
         if let Some(context) = self.rendering_context() {
             context.save();
             self.clip(&context);
             context.set_fill_style(&JsValue::from_str(&color.as_css_string()));
-            let rect = rect.to_f64();
+            let rect = rect.to_pixels(&self.scale).cast::<f64>().as_sized();
             context.fill_rect(
                 rect.origin.x,
                 rect.origin.y,
@@ -263,10 +289,10 @@ impl Renderer for BrowserRenderer {
         }
     }
 
-    fn stroke_line(
+    fn stroke_line<P: Displayable<f32, Pixels = Point<f32, Pixels>>>(
         &self,
-        point_a: Point2D<f32, Points>,
-        point_b: Point2D<f32, Points>,
+        point_a: P,
+        point_b: P,
         options: &StrokeOptions,
     ) {
         if let Some(context) = self.rendering_context() {
@@ -275,16 +301,20 @@ impl Renderer for BrowserRenderer {
             // TODO handle line width
             context.set_stroke_style(&JsValue::from_str(&options.color.as_css_string()));
             context.begin_path();
-            let point_a = point_a.to_f64();
+            let point_a = point_a.to_pixels(&self.scale).cast::<f64>();
             context.move_to(point_a.x, point_a.y);
-            let point_b = point_b.to_f64();
+            let point_b = point_b.to_pixels(&self.scale).cast::<f64>();
             context.line_to(point_b.x, point_b.y);
             context.stroke();
             context.restore();
         }
     }
 
-    fn draw_image(&self, image: &gooey::core::assets::Image, location: Point2D<f32, Points>) {
+    fn draw_image(
+        &self,
+        image: &Image,
+        location: impl Displayable<f32, Pixels = Point<f32, Pixels>>,
+    ) {
         if let Some(context) = self.rendering_context() {
             if let Some(css_id) = image.css_id() {
                 if let Some(element) = window_document().get_element_by_id(&css_id) {
@@ -292,7 +322,7 @@ impl Renderer for BrowserRenderer {
                     context.save();
                     self.clip(&context);
 
-                    let location = location.to_f64();
+                    let location = location.to_pixels(&self.scale).cast::<f64>();
                     context
                         .draw_image_with_html_image_element(&element, location.x, location.y)
                         .unwrap();

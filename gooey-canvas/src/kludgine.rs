@@ -1,9 +1,11 @@
 use std::boxed::Box;
 
 use gooey::{
-    core::{euclid::Size2D, Points, Transmogrifier, TransmogrifierContext},
+    core::{figures::Size, Scaled, Transmogrifier, TransmogrifierContext},
     frontends::{
-        rasterizer::{Rasterizer, RegisteredTransmogrifier, Renderer, WidgetRasterizer},
+        rasterizer::{
+            ContentArea, Rasterizer, RegisteredTransmogrifier, Renderer, WidgetRasterizer,
+        },
         renderers::kludgine::Kludgine,
     },
 };
@@ -25,25 +27,29 @@ impl Transmogrifier<Rasterizer<Kludgine>> for CanvasTransmogrifier {
 }
 
 impl WidgetRasterizer<Kludgine> for CanvasTransmogrifier {
-    fn render(&self, context: TransmogrifierContext<'_, Self, Rasterizer<Kludgine>>) {
+    fn render(
+        &self,
+        context: &mut TransmogrifierContext<'_, Self, Rasterizer<Kludgine>>,
+        content_area: &ContentArea,
+    ) {
         if let Some(scene) = context.frontend.renderer() {
-            context
-                .widget
-                .renderable
-                .render(CanvasRenderer::RasterizerRenderer(scene.clone()));
+            context.widget.renderable.render(
+                CanvasRenderer::RasterizerRenderer(scene.clone()),
+                content_area,
+            );
         }
     }
 
-    fn content_size(
+    fn measure_content(
         &self,
-        context: TransmogrifierContext<'_, Self, Rasterizer<Kludgine>>,
-        constraints: Size2D<Option<f32>, Points>,
-    ) -> Size2D<f32, Points> {
+        context: &mut TransmogrifierContext<'_, Self, Rasterizer<Kludgine>>,
+        constraints: Size<Option<f32>, Scaled>,
+    ) -> Size<f32, Scaled> {
         let size = context
             .frontend
             .renderer()
-            .map_or_else(Size2D::default, |scene| scene.size());
-        Size2D::new(
+            .map_or_else(Size::default, |scene| scene.size());
+        Size::new(
             constraints.width.unwrap_or(size.width),
             constraints.height.unwrap_or(size.height),
         )

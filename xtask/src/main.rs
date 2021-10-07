@@ -75,6 +75,8 @@ fn build_regular_browser_example(name: &str) -> Result<(), devx_cmd::Error> {
         "frontend-browser",
         "--target",
         "wasm32-unknown-unknown",
+        "--target-dir",
+        "target/wasm",
     )
 }
 

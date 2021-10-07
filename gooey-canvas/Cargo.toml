@@ -19,9 +19,9 @@ frontend-browser = [
 ]
 
 [dependencies]
-gooey = { git="https://github.com/khonsulabs/gooey.git", branch="main" }
-wasm-bindgen = { version="0.2", optional=true }
-web-sys = { version="0.3", optional=true, features=[
+gooey = { git = "https://github.com/khonsulabs/gooey.git", branch = "main" }
+wasm-bindgen = { version = "0.2", optional = true }
+web-sys = { version = "0.3", optional = true, features = [
     "HtmlElement",
     "Element",
     "HtmlCanvasElement",
@@ -29,11 +29,15 @@ web-sys = { version="0.3", optional=true, features=[
     "CanvasRenderingContext2d",
     "TextMetrics",
 ] }
-js-sys = { version="0.3", optional=true }
-flume = { version="0.10", optional=true }
+js-sys = { version = "0.3", optional = true }
+flume = { version = "0.10", optional = true }
 log = "0.4"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-tokio = { version="1", features=["full"] }
+tokio = { version = "1", features = ["full"] }
 anyhow = "1"
-image = { version="0.23", default-features=false, features=["ico", "png", "jpeg"] }
+image = { version = "0.23", default-features = false, features = [
+    "ico",
+    "png",
+    "jpeg",
+] }

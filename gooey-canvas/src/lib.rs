@@ -3,9 +3,12 @@ use std::fmt::Debug;
 use browser::BrowserRenderer;
 use gooey::{
     core::{
+        assets::Image,
+        figures::{DisplayScale, Displayable, Point, Rect, Size},
         styles::{Color, SystemTheme},
-        KeyedStorage, StyledWidget, Widget,
+        KeyedStorage, Pixels, Scaled, StyledWidget, Widget,
     },
+    frontends::rasterizer::ContentArea,
     renderer::{Renderer, StrokeOptions, TextOptions},
     widgets::component::{Behavior, ComponentBuilder, Content, ContentBuilder},
     App,
@@ -39,12 +42,12 @@ impl Canvas {
 }
 
 pub trait Renderable: Send + Sync + 'static {
-    fn render(&mut self, renderer: CanvasRenderer);
+    fn render(&mut self, renderer: CanvasRenderer, content_area: &ContentArea);
 }
 
-impl<F: FnMut(CanvasRenderer) + Send + Sync + 'static> Renderable for F {
-    fn render(&mut self, renderer: CanvasRenderer) {
-        self(renderer)
+impl<F: FnMut(CanvasRenderer, &ContentArea) + Send + Sync + 'static> Renderable for F {
+    fn render(&mut self, renderer: CanvasRenderer, content_area: &ContentArea) {
+        self(renderer, content_area)
     }
 }
 
@@ -61,6 +64,7 @@ impl Widget for Canvas {
     type Event = ();
 
     const CLASS: &'static str = "gooey-canvas";
+    const FOCUSABLE: bool = false;
 }
 
 #[derive(Debug)]
@@ -94,7 +98,7 @@ impl Renderer for CanvasRenderer {
         }
     }
 
-    fn size(&self) -> gooey::core::euclid::Size2D<f32, gooey::core::Points> {
+    fn size(&self) -> Size<f32, Scaled> {
         match self {
             #[cfg(feature = "frontend-kludgine")]
             Self::RasterizerRenderer(renderer) => renderer.size(),
@@ -103,7 +107,7 @@ impl Renderer for CanvasRenderer {
         }
     }
 
-    fn clip_to(&self, bounds: gooey::core::euclid::Rect<f32, gooey::core::Points>) -> Self {
+    fn clip_to(&self, bounds: Rect<f32, Scaled>) -> Self {
         match self {
             #[cfg(feature = "frontend-kludgine")]
             Self::RasterizerRenderer(renderer) => {
@@ -114,7 +118,7 @@ impl Renderer for CanvasRenderer {
         }
     }
 
-    fn clip_bounds(&self) -> gooey::core::euclid::Rect<f32, gooey::core::Points> {
+    fn clip_bounds(&self) -> Rect<f32, Scaled> {
         match self {
             #[cfg(feature = "frontend-kludgine")]
             Self::RasterizerRenderer(renderer) => renderer.clip_bounds(),
@@ -123,7 +127,7 @@ impl Renderer for CanvasRenderer {
         }
     }
 
-    fn scale(&self) -> gooey::core::euclid::Scale<f32, gooey::core::Points, gooey::core::Pixels> {
+    fn scale(&self) -> DisplayScale<f32> {
         match self {
             #[cfg(feature = "frontend-kludgine")]
             Self::RasterizerRenderer(renderer) => renderer.scale(),
@@ -135,7 +139,7 @@ impl Renderer for CanvasRenderer {
     fn render_text(
         &self,
         text: &str,
-        baseline_origin: gooey::core::euclid::Point2D<f32, gooey::core::Points>,
+        baseline_origin: impl Displayable<f32, Pixels = Point<f32, Pixels>>,
         options: &TextOptions,
     ) {
         match self {
@@ -152,7 +156,7 @@ impl Renderer for CanvasRenderer {
         &self,
         text: &str,
         options: &TextOptions,
-    ) -> gooey::renderer::TextMetrics<gooey::core::Points> {
+    ) -> gooey::renderer::TextMetrics<Scaled> {
         match self {
             #[cfg(feature = "frontend-kludgine")]
             Self::RasterizerRenderer(renderer) => renderer.measure_text(text, options),
@@ -163,7 +167,7 @@ impl Renderer for CanvasRenderer {
 
     fn stroke_rect(
         &self,
-        rect: &gooey::core::euclid::Rect<f32, gooey::core::Points>,
+        rect: &impl Displayable<f32, Pixels = Rect<f32, Pixels>>,
         options: &StrokeOptions,
     ) {
         match self {
@@ -174,7 +178,7 @@ impl Renderer for CanvasRenderer {
         }
     }
 
-    fn fill_rect(&self, rect: &gooey::core::euclid::Rect<f32, gooey::core::Points>, color: Color) {
+    fn fill_rect(&self, rect: &impl Displayable<f32, Pixels = Rect<f32, Pixels>>, color: Color) {
         match self {
             #[cfg(feature = "frontend-kludgine")]
             Self::RasterizerRenderer(renderer) => renderer.fill_rect(rect, color),
@@ -183,10 +187,10 @@ impl Renderer for CanvasRenderer {
         }
     }
 
-    fn stroke_line(
+    fn stroke_line<P: Displayable<f32, Pixels = Point<f32, Pixels>>>(
         &self,
-        point_a: gooey::core::euclid::Point2D<f32, gooey::core::Points>,
-        point_b: gooey::core::euclid::Point2D<f32, gooey::core::Points>,
+        point_a: P,
+        point_b: P,
         options: &StrokeOptions,
     ) {
         match self {
@@ -199,8 +203,8 @@ impl Renderer for CanvasRenderer {
 
     fn draw_image(
         &self,
-        image: &gooey::core::assets::Image,
-        location: gooey::core::euclid::Point2D<f32, gooey::core::Points>,
+        image: &Image,
+        location: impl Displayable<f32, Pixels = Point<f32, Pixels>>,
     ) {
         match self {
             #[cfg(feature = "frontend-kludgine")]

@@ -1,10 +1,11 @@
 use gooey::{
     core::{
         assets::{Asset, Image},
-        euclid::Point2D,
+        figures::{Point, Rectlike, Vector},
         styles::Color,
-        Callback, Context,
+        Callback, Context, Scaled,
     },
+    frontends::rasterizer::ContentArea,
     renderer::Renderer,
     widgets::component::{Behavior, Component, ComponentCommand},
     App,
@@ -48,7 +49,7 @@ impl Behavior for Basic {
                 callback_context.send_command(ComponentCommand::Widget(Command::Refresh))
             }),
             Callback::new(|err| panic!("error loading asset: {}", err)),
-            context.frontend.as_ref(),
+            context.frontend(),
         )
     }
 
@@ -59,10 +60,15 @@ impl Behavior for Basic {
     ) -> gooey::core::StyledWidget<Self::Content> {
         let image = self.image.clone();
         builder
-            .on_render(move |renderer: CanvasRenderer| {
-                renderer.fill_rect(&renderer.bounds().inflate(-64., -64.), Color::DARKBLUE);
-                renderer.draw_image(&image, Point2D::new(128., 128.));
-            })
+            .on_render(
+                move |renderer: CanvasRenderer, content_area: &ContentArea| {
+                    renderer.fill_rect(
+                        &content_area.bounds().inflate(Vector::new(-64., -64.)),
+                        Color::DARKBLUE,
+                    );
+                    renderer.draw_image(&image, Point::<f32, Scaled>::new(128., 128.));
+                },
+            )
             .finish()
     }
 
@@ -81,7 +87,7 @@ impl Behavior for Basic {
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
 
-    use gooey::core::{euclid::Size2D, styles::SystemTheme};
+    use gooey::core::{figures::Size, styles::SystemTheme};
 
     use super::*;
 
@@ -90,7 +96,7 @@ mod tests {
         for theme in [SystemTheme::Dark, SystemTheme::Light] {
             let headless = app().headless();
             let snapshot = headless
-                .screenshot(Size2D::new(320, 240), theme, None)
+                .screenshot(Size::new(320, 240), theme, None)
                 .await?
                 .to_rgb8();
 
