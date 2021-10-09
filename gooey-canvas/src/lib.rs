@@ -1,12 +1,13 @@
 use std::fmt::Debug;
 
+#[cfg(feature = "frontend-browser")]
 use browser::BrowserRenderer;
 use gooey::{
     core::{
         assets::Image,
         figures::{DisplayScale, Displayable, Point, Rect, Size},
         styles::{Color, SystemTheme},
-        KeyedStorage, Pixels, Scaled, StyledWidget, Widget,
+        Context, KeyedStorage, Pixels, Scaled, StyledWidget, Widget,
     },
     frontends::rasterizer::ContentArea,
     renderer::{Renderer, StrokeOptions, TextOptions},
@@ -39,10 +40,22 @@ impl Canvas {
             renderable: Box::new(renderable),
         })
     }
+
+    pub fn refresh(&self, context: &Context<Self>) {
+        context.send_command(Command::Refresh);
+    }
 }
 
 pub trait Renderable: Send + Sync + 'static {
     fn render(&mut self, renderer: CanvasRenderer, content_area: &ContentArea);
+
+    #[allow(unused_variables)]
+    fn mouse_down(&mut self, location: Point<f32, Scaled>, content_area: &ContentArea) -> bool {
+        false
+    }
+
+    #[allow(unused_variables)]
+    fn mouse_up(&mut self, location: Option<Point<f32, Scaled>>, content_area: &ContentArea) {}
 }
 
 impl<F: FnMut(CanvasRenderer, &ContentArea) + Send + Sync + 'static> Renderable for F {

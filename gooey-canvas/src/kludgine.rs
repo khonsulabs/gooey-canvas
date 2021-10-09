@@ -1,10 +1,14 @@
 use std::boxed::Box;
 
 use gooey::{
-    core::{figures::Size, Scaled, Transmogrifier, TransmogrifierContext},
+    core::{
+        figures::{Point, Size},
+        Scaled, Transmogrifier, TransmogrifierContext,
+    },
     frontends::{
         rasterizer::{
-            ContentArea, Rasterizer, RegisteredTransmogrifier, Renderer, WidgetRasterizer,
+            winit::event::MouseButton, ContentArea, EventStatus, Rasterizer,
+            RegisteredTransmogrifier, Renderer, WidgetRasterizer,
         },
         renderers::kludgine::Kludgine,
     },
@@ -53,6 +57,40 @@ impl WidgetRasterizer<Kludgine> for CanvasTransmogrifier {
             constraints.width.unwrap_or(size.width),
             constraints.height.unwrap_or(size.height),
         )
+    }
+
+    fn mouse_down(
+        &self,
+        context: &mut TransmogrifierContext<'_, Self, Rasterizer<Kludgine>>,
+        _button: MouseButton,
+        location: Point<f32, Scaled>,
+        area: &ContentArea,
+    ) -> EventStatus {
+        if context.widget.renderable.mouse_down(location, area) {
+            EventStatus::Processed
+        } else {
+            EventStatus::Ignored
+        }
+    }
+
+    // fn mouse_drag(
+    //     &self,
+    //     context: &mut TransmogrifierContext<'_, Self, Rasterizer<Kludgine>>,
+    //     _button: MouseButton,
+    //     location: Point<f32, Scaled>,
+    //     area: &ContentArea,
+    // ) {
+    //     context.widget.renderable.mouse_drag(location, area)
+    // }
+
+    fn mouse_up(
+        &self,
+        context: &mut TransmogrifierContext<'_, Self, Rasterizer<Kludgine>>,
+        _button: MouseButton,
+        location: Option<Point<f32, Scaled>>,
+        area: &ContentArea,
+    ) {
+        context.widget.renderable.mouse_up(location, area)
     }
 }
 
